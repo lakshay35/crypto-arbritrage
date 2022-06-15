@@ -23,15 +23,9 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
  */
 module.exports = {
   solidity: {
-    version: "0.8.9",
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 1000,
-      },
-    },
+    version: "0.8.9"
   },
-  defaultNetwork: "ropsten",
+  defaultNetwork: "hardhat",
   networks: {
     ropsten: {
       url: process.env.ROPSTEN_URL || "",
@@ -41,13 +35,20 @@ module.exports = {
     hardhat: {
       forking: {
         enabled: true,
-        url: process.env.POLYGON_RPC
+        url: process.env.POLYGON_RPC,
+        blockNumber: 29141900
+        // accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : []
       }
+    },
+    polygonMainnet: {
+      url: process.env.POLYGON_RPC || "",
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : []
     }
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
     currency: "USD",
+    coinmarketcap: process.env.COIN_MARKET_CAP_API_KEY
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY,
