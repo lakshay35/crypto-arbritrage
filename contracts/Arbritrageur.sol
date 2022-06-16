@@ -13,10 +13,12 @@ import {Withdrawable} from "./utils/Withdrawable.sol";
 import {IUniswapV2Router02} from "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 import {TransferHelper} from "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
+import {console} from "hardhat/console.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 contract Arbritrageur is FlashLoanReceiverBaseV2, Withdrawable {
     using SafeMath for uint256;
-
+    event Hello();
     address private QuickSwapFactory =
         0x5757371414417b8C6CAad45bAeF941aBc7d3Ab32;
     ISwapRouter private swapRouter =
@@ -120,6 +122,8 @@ contract Arbritrageur is FlashLoanReceiverBaseV2, Withdrawable {
         uint256 amountIn
     ) external {
         // Approve the router to spend DAI.
+        console.log("Msg sender inside swaoTokenOnUniV3");
+        console.log(msg.sender);
         TransferHelper.safeApprove(tokenIn, address(swapRouter), amountIn);
 
         // Naively set amountOutMinimum to 0. In production, use an oracle or other data source to choose a safer value for amountOutMinimum.
@@ -182,7 +186,13 @@ contract Arbritrageur is FlashLoanReceiverBaseV2, Withdrawable {
 
         if (uniToQuick) {
             // Buy on Uni and sell on Quick
+            console.log(
+                "Msg sender inside arbritrage function uniToQuick block"
+            );
+            console.log(msg.sender);
 
+            // console.log(Strings.toHexString(uint256(uint160(_msgSender)), 20));
+            // console.log(Strings.toHexString(uint256(uint160(owner)), 20));
             // Swap loanAsset for uniTokenOut
             this.swapTokensOnUniV3(
                 loanAsset,

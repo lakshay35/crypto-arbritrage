@@ -93,7 +93,7 @@ describe("Arbritrageur", () => {
     const Arbritrageur = await ethers.getContractFactory("Arbritrageur");
     const arbritrageur = await Arbritrageur.deploy(AAVE_LENDING_POOL_ADDRESS_PROVIDER);
     await arbritrageur.deployed();
-
+    console.log("Arbritrageur deployer", arbritrageur.deployTransaction.from);
     expect(await arbritrageur.owner()).to.equal(arbritrageur.deployTransaction.from);
   });
 
