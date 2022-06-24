@@ -36,7 +36,7 @@ module.exports = {
       forking: {
         enabled: true,
         url: process.env.POLYGON_RPC,
-        blockNumber: 29141900
+        blockNumber: 29141901
         // accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : []
       }
     },

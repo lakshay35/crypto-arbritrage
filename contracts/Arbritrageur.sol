@@ -13,16 +13,23 @@ import {Withdrawable} from "./utils/Withdrawable.sol";
 import {IUniswapV2Router02} from "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 import {TransferHelper} from "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
-import {console} from "hardhat/console.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 contract Arbritrageur is FlashLoanReceiverBaseV2, Withdrawable {
     using SafeMath for uint256;
-    event Hello();
+
     address private QuickSwapFactory =
         0x5757371414417b8C6CAad45bAeF941aBc7d3Ab32;
     ISwapRouter private swapRouter =
         ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
+    bool uniToQuick = false;
+    address loanAsset = 0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff;
+    address uniTokenOut = 0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff;
+    uint24 uniPoolFee = 0;
+    uint256 loanAmount = 0;
+    address[] tokenPath = [0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff];
+
+    uint internal quickAmountOut = 0;
 
     constructor(address _addressProvider)
         FlashLoanReceiverBaseV2(_addressProvider)
@@ -50,6 +57,41 @@ contract Arbritrageur is FlashLoanReceiverBaseV2, Withdrawable {
         // Your logic goes here.
         //
 
+        if (uniToQuick) {
+            // Buy on Uni and sell on Quick
+
+            // Swap loanAsset for uniTokenOut
+            swapTokensOnUniV3(loanAsset, uniTokenOut, uniPoolFee, loanAmount);
+
+            // Estimate amount out from quickswap
+            IUniswapV2Router02 router = IUniswapV2Router02(
+                0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff
+            );
+
+            uint256 inputBalance = IERC20(uniTokenOut).balanceOf(address(this));
+
+            uint[] memory amountsOut = router.getAmountsOut(
+                inputBalance,
+                tokenPath
+            );
+
+            // Swap uniTokenOut for loanAsset
+            swapTokensOnQuickswap(tokenPath, inputBalance, amountsOut[1]);
+        } else {
+            // Buy on Quick and sell on Uni
+
+            // Swap loanAsset with
+            swapTokensOnQuickswap(tokenPath, loanAmount, quickAmountOut);
+
+            // Swap outcoming asset from quickswap for loan asset
+            swapTokensOnUniV3(
+                tokenPath[tokenPath.length - 1],
+                loanAsset,
+                uniPoolFee,
+                quickAmountOut
+            );
+        }
+
         // At the end of your logic above, this contract owes
         // the flashloaned amounts + premiums.
         // Therefore ensure your contract has enough to repay
@@ -58,7 +100,6 @@ contract Arbritrageur is FlashLoanReceiverBaseV2, Withdrawable {
         // Approve the LendingPool contract allowance to *pull* the owed amount
         for (uint256 i = 0; i < assets.length; i++) {
             uint256 amountOwing = amounts[i].add(premiums[i]);
-
             IERC20(assets[i]).approve(address(LENDING_POOL), amountOwing);
         }
 
@@ -96,7 +137,7 @@ contract Arbritrageur is FlashLoanReceiverBaseV2, Withdrawable {
      *  Flash multiple assets
      */
     function flashLoan(address[] memory assets, uint256[] memory amounts)
-        external
+        internal
     {
         _flashLoan(assets, amounts);
     }
@@ -104,7 +145,7 @@ contract Arbritrageur is FlashLoanReceiverBaseV2, Withdrawable {
     /*
      *  Flash loan 100000000000000000 wei (0.1 ether) worth of `_asset`
      */
-    function flashLoan(address _asset, uint256 amount) external {
+    function flashLoan(address _asset, uint256 amount) public onlyOwner {
         address[] memory assets = new address[](1);
         assets[0] = _asset;
 
@@ -120,10 +161,8 @@ contract Arbritrageur is FlashLoanReceiverBaseV2, Withdrawable {
         address tokenOut,
         uint24 poolFee,
         uint256 amountIn
-    ) external {
-        // Approve the router to spend DAI.
-        console.log("Msg sender inside swaoTokenOnUniV3");
-        console.log(msg.sender);
+    ) internal {
+        // Approve the router to spend tokenIn
         TransferHelper.safeApprove(tokenIn, address(swapRouter), amountIn);
 
         // Naively set amountOutMinimum to 0. In production, use an oracle or other data source to choose a safer value for amountOutMinimum.
@@ -145,10 +184,10 @@ contract Arbritrageur is FlashLoanReceiverBaseV2, Withdrawable {
     }
 
     function swapTokensOnQuickswap(
-        address[] calldata path,
+        address[] memory path,
         uint amountIn,
         uint amountOut
-    ) external {
+    ) internal {
         require(path.length >= 2, "Swap Path requires 2 tokens");
 
         IUniswapV2Router02 router = IUniswapV2Router02(
@@ -173,59 +212,23 @@ contract Arbritrageur is FlashLoanReceiverBaseV2, Withdrawable {
     }
 
     function arbritrage(
-        address loanAsset,
-        uint256 loanAmount,
-        bool uniToQuick,
-        address uniTokenOut,
-        uint24 uniPoolFee,
-        address[] calldata path,
-        uint quickAmountOut
+        address LoanAsset,
+        uint256 LoanAmount,
+        bool UniToQuick,
+        address UniTokenOut,
+        uint24 UniPoolFee,
+        address[] calldata Path,
+        uint QuickAmountOut
     ) external onlyOwner {
-        // Get flash loan from Aave
-        this.flashLoan(loanAsset, loanAmount);
-
-        if (uniToQuick) {
-            // Buy on Uni and sell on Quick
-            console.log(
-                "Msg sender inside arbritrage function uniToQuick block"
-            );
-            console.log(msg.sender);
-
-            // console.log(Strings.toHexString(uint256(uint160(_msgSender)), 20));
-            // console.log(Strings.toHexString(uint256(uint160(owner)), 20));
-            // Swap loanAsset for uniTokenOut
-            this.swapTokensOnUniV3(
-                loanAsset,
-                uniTokenOut,
-                uniPoolFee,
-                loanAmount
-            );
-
-            // Estimate amount out from quickswap
-            IUniswapV2Router02 router = IUniswapV2Router02(
-                0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff
-            );
-
-            uint256 inputBalance = IERC20(uniTokenOut).balanceOf(address(this));
-
-            uint[] memory amountsOut = router.getAmountsOut(inputBalance, path);
-
-            // Swap uniTokenOut for loanAsset
-            this.swapTokensOnQuickswap(path, inputBalance, amountsOut[1]);
-        } else {
-            // Buy on Quick and sell on Uni
-
-            // Swap loanAsset with
-            this.swapTokensOnQuickswap(path, loanAmount, quickAmountOut);
-
-            // Swap outcoming asset from quickswap for loan asset
-            this.swapTokensOnUniV3(
-                path[path.length - 1],
-                loanAsset,
-                uniPoolFee,
-                quickAmountOut
-            );
-        }
+        loanAsset = LoanAsset;
+        loanAmount = LoanAmount;
+        uniToQuick = UniToQuick;
+        uniTokenOut = UniTokenOut;
+        uniPoolFee = UniPoolFee;
+        tokenPath = Path;
+        quickAmountOut = QuickAmountOut;
+        // Run flash loan and let the executeOperation function do the arbritrage
+        flashLoan(LoanAsset, LoanAmount);
 
         // Aave flash loan asset with interest will now be returned
         // Residual amount of loan asset is profit

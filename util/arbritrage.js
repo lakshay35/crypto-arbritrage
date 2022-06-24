@@ -12,6 +12,31 @@ const calculateArbritrage = async () => {
   ]);
 
   console.log(result);
+
+  const quickPrice = result[0].wethPrice;
+  const uniPrice = result[1].wethPrice;
+  //TODO: Send off transaction to chain when profit available
+  console.log(Math.abs(quickPrice - uniPrice) / Math.min(quickPrice, uniPrice));
+  console.log();
+  if((Math.abs(quickPrice - uniPrice) / Math.min(quickPrice, uniPrice) > 0.005)) {
+    console.log("Can execute profitable trade > 1% profit overcoming Flash loan 0.09% interest");
+    const profit = Math.abs(quickPrice - uniPrice);
+    let multiplier = 0;
+    if(quickPrice < uniPrice) {
+      console.log("Buy on Quickswap and sell on Uniswap");
+      multiplier = (profit / quickPrice);
+      console.log(multiplier * 100, "% profit available");
+    } else {
+      console.log("Buy on Uniswap and sell on Quickswap");
+      multiplier = (profit / uniPrice);
+      console.log(multiplier * 100, "% profit available");
+    }
+
+    console.log("$100,000.00", "can be turned into", (1 + multiplier) * 100000);
+
+  } else {
+    console.log("No profitable trade available");
+  }
 }
 
 const getPriceOfWethOnQuickswap = async () => {

@@ -18,82 +18,12 @@ describe("Arbritrageur", () => {
     const Arbritrageur = await ethers.getContractFactory("Arbritrageur");
     const arbritrageur = await Arbritrageur.deploy(AAVE_LENDING_POOL_ADDRESS_PROVIDER);
     await arbritrageur.deployed();
-
-    console.log("Deployed Arbritrageur at address", arbritrageur.address);
-  });
-
-  it("Should execute Flashloan", async () => {
-    const Arbritrageur = await ethers.getContractFactory("Arbritrageur");
-    const arbritrageur = await Arbritrageur.deploy(AAVE_LENDING_POOL_ADDRESS_PROVIDER);
-    await arbritrageur.deployed();
-
-    await transferToken(arbritrageur.address, WETH_HOLDER, WETH_ADDRESS, ethers.utils.parseEther("1"));
-
-    // Flash loan 1 WETH
-    await arbritrageur["flashLoan(address,uint256)"](WETH_ADDRESS, ethers.utils.parseEther("100"));
-  });
-
-  it("Should swap tokens on Uniswap v3", async () => {
-    const Arbritrageur = await ethers.getContractFactory("Arbritrageur");
-    const arbritrageur = await Arbritrageur.deploy(AAVE_LENDING_POOL_ADDRESS_PROVIDER);
-    await arbritrageur.deployed();
-
-    const usdcTokenContract = await ethers.getContractAt(ERC20ABI, USDC_ADDRESS);
-    const wethTokenContract = await ethers.getContractAt(ERC20ABI, WETH_ADDRESS);
-
-    // transfer USDC to deployed contract before swap
-    await transferToken(arbritrageur.address, USDC_HOLDER, USDC_ADDRESS, "10000000000");
-
-    expect(await usdcTokenContract.balanceOf(arbritrageur.address)).to.equal(10000000000);
-    expect(await wethTokenContract.balanceOf(arbritrageur.address)).to.equal(0);
-
-    const preTradeWethBalance = await wethTokenContract.balanceOf(arbritrageur.address);
-
-    expect(preTradeWethBalance.eq(BigNumber.from("0"))).to.be.true;
-
-    await arbritrageur.swapTokensOnUniV3(
-      USDC_ADDRESS,
-      WETH_ADDRESS,
-      "3000",
-      "1000000000"
-    )
-
-    const postTradeWethBalance = await wethTokenContract.balanceOf(arbritrageur.address);
-
-    expect(postTradeWethBalance.gt(preTradeWethBalance)).to.be.true;
-  });
-
-  it("Should swap tokens on Quickswap", async () => {
-    const Arbritrageur = await ethers.getContractFactory("Arbritrageur");
-    const arbritrageur = await Arbritrageur.deploy(AAVE_LENDING_POOL_ADDRESS_PROVIDER);
-    await arbritrageur.deployed();
-
-    const usdcTokenContract = await ethers.getContractAt(ERC20ABI, USDC_ADDRESS);
-    const wethTokenContract = await ethers.getContractAt(ERC20ABI, WETH_ADDRESS);
-
-    // transfer USDC to deployed contract before swap
-    await transferToken(arbritrageur.address, USDC_HOLDER, USDC_ADDRESS, "10000000000");
-
-    expect(await usdcTokenContract.balanceOf(arbritrageur.address)).to.equal(10000000000);
-    expect(await wethTokenContract.balanceOf(arbritrageur.address)).to.equal(0);
-
-    const router = await ethers.getContractAt(UNIV2ROUTERABI, "0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff");
-    const amountsOut = await router.getAmountsOut(1000000000, [USDC_ADDRESS, WETH_ADDRESS]);
-
-    await arbritrageur.swapTokensOnQuickswap([USDC_ADDRESS, WETH_ADDRESS], "1000000000", amountsOut[1].toString());
-
-    const currWethBalance = await wethTokenContract.balanceOf(arbritrageur.address);
-
-    expect(currWethBalance.eq(amountsOut[1])).to.be.true;
-
-    expect((await usdcTokenContract.balanceOf(arbritrageur.address)).toString()).to.be.equal("9000000000");
   });
 
   it('Should have owner', async () => {
     const Arbritrageur = await ethers.getContractFactory("Arbritrageur");
     const arbritrageur = await Arbritrageur.deploy(AAVE_LENDING_POOL_ADDRESS_PROVIDER);
     await arbritrageur.deployed();
-    console.log("Arbritrageur deployer", arbritrageur.deployTransaction.from);
     expect(await arbritrageur.owner()).to.equal(arbritrageur.deployTransaction.from);
   });
 
@@ -131,11 +61,11 @@ describe("Arbritrageur", () => {
     const usdcContract = await ethers.getContractAt(ERC20ABI, USDC_ADDRESS);
 
     const usdcPreArbritrageBalance = await usdcContract.balanceOf(arbritrageur.address);
-    console.log("USDC BALANCE PRE ARBRITRAGE", usdcPreArbritrageBalance.div("1000000").toString());
+    // console.log("USDC BALANCE PRE ARBRITRAGE", usdcPreArbritrageBalance.div("1000000").toString());
 
     await arbritrageur.arbritrage(
       USDC_ADDRESS,
-      "1000000000",
+      "100000000",
       true,
       WETH_ADDRESS,
       "3000",
@@ -144,7 +74,7 @@ describe("Arbritrageur", () => {
     );
 
     const usdcBalance = await usdcContract.balanceOf(arbritrageur.address);
-    console.log("USDC balance of arbritrageur contract", usdcBalance.div("1000000").toString());
+    // console.log("USDC balance of arbritrageur contract", usdcBalance.toString());
   });
 });
 
