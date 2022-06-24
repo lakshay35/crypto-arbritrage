@@ -26,7 +26,8 @@
     "compile": "npx hardhat compile",
     "test": "npx hardhat test",
     "deploy": "npx hardhat run scripts/deploy.js --network $1",
-    "deploy-mainnet": "npx hardhat run scripts/deploy.js --network polygonMainnet"
+    "deploy-mainnet": "npx hardhat run scripts/deploy.js --network polygonMainnet",
+    "start": "node scripts/index.js"
   },
   "devDependencies": {
     "chai": "^4.3.6"
