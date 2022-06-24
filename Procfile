@@ -1,1 +1,1 @@
-web: node scripts/index.js
+worker: node scripts/index.js
