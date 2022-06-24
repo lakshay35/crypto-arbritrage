@@ -31,7 +31,7 @@ const subscribeToBlocks = () => {
   web3.eth.subscribe("newHeads").on("data", (data) => {
     console.log("Detect new block", data.hash);
 
-    calculateArbritrage();
+    calculateArbritrage(global.rpc);
   });
 }
 
